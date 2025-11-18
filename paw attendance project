@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Attendance System - Modern Pink Theme</title>
+
+<style>
+  body { 
+    font-family: 'Poppins', Arial; 
+    margin: 0; 
+    background: #ffeef6; 
+    padding: 20px;
+  }
+
+  h1, h2 {
+    color: #c2185b;
+    text-align: center;
+    font-weight: 700;
+  }
+
+  .card {
+    background: white;
+    padding: 20px;
+    border-radius: 14px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+
+  table { 
+    width: 100%; 
+    border-collapse: collapse; 
+    margin-bottom: 12px; 
+    background:white; 
+    border-radius: 10px;
+    overflow:hidden;
+  }
+
+  th {
+    background:#ff5c8d;
+    color:white;
+    padding: 12px;
+    font-size: 15px;
+  }
+
+  td {
+    padding: 10px;
+    border-bottom: 1px solid #f3d0dd;
+  }
+
+  tr:hover {
+    background: #ffe0ed;
+  }
+
+  .green { background-color: #d4f7d9 !important; }
+  .yellow { background-color: #fff7a8 !important; }
+  .red { background-color: #ffb3b3 !important; }
+
+  input[type="text"] {
+    padding: 10px;
+    width: 260px;
+    border-radius: 8px;
+    border:1px solid #ff8fb1;
+    margin-bottom: 6px;
+  }
+
+  button {
+    padding: 10px 18px;
+    background:#ff5c8d;
+    color:white;
+    border:none;
+    border-radius:6px;
+    cursor:pointer;
+    font-weight:600;
+  }
+
+  button:hover {
+    background:#d94a76;
+  }
+
+  .error {
+    color:#d50000;
+    font-size: 13px;
+  }
+
+  #reportBox { display:none; }
+
+  #successMsg { color:green; font-size: 15px; }
+</style>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+</head>
+<body>
+
+<h1>📘 Attendance System</h1>
+
+<div class="card">
+  <input type="text" id="searchBox" placeholder="Search by name..." />
+  <button id="sortAbs">Sort by Absences (ASC)</button>
+  <button id="sortPar">Sort by Participation (DESC)</button>
+  <p id="sortMsg"></p>
+</div>
+
+<div class="card">
+<table id="attendanceTable">
+  <thead>
+    <tr>
+      <th>Last</th>
+      <th>First</th>
+      <th>S1</th><th>S2</th><th>S3</th><th>S4</th><th>S5</th><th>S6</th>
+      <th>P1</th><th>P2</th><th>P3</th><th>P4</th><th>P5</th><th>P6</th>
+      <th>Absences</th>
+      <th>Participation</th>
+      <th>Message</th>
+    </tr>
+  </thead>
+
+  <tbody>
+    <tr>
+      <td>Ahmed</td><td>Sara</td>
+      <td>✓</td><td>✓</td><td></td><td></td><td></td><td></td>
+      <td>✓</td><td></td><td></td><td></td><td></td><td></td>
+      <td></td><td></td><td></td>
+    </tr>
+
+    <tr>
+      <td>Yacine</td><td>Ali</td>
+      <td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td>
+      <td>✓</td><td>✓</td><td>✓</td><td>✓</td><td></td><td></td>
+      <td></td><td></td><td></td>
+    </tr>
+
+    <tr>
+      <td>Houcine</td><td>Rania</td>
+      <td>✓</td><td>✓</td><td>✓</td><td>✓</td><td></td><td></td>
+      <td>✓</td><td>✓</td><td></td><td></td><td></td><td></td>
+      <td></td><td></td><td></td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<div class="card">
+  <button id="showReport">Show Report</button>
+  <div id="reportBox">
+    <p>Total Students: <span id="totalSt"></span></p>
+    <p>Present Students: <span id="presentSt"></span></p>
+    <p>Participants: <span id="parSt"></span></p>
+    <canvas id="chart"></canvas>
+  </div>
+</div>
+
+<div class="card">
+<h2>Add Student</h2>
+
+<form id="addForm" novalidate>
+  <label>Student ID</label><br>
+  <input type="text" id="sid"><br>
+  <span id="sidErr" class="error"></span>
+
+  <label>Last Name</label><br>
+  <input type="text" id="lname"><br>
+  <span id="lnameErr" class="error"></span>
+
+  <label>First Name</label><br>
+  <input type="text" id="fname"><br>
+  <span id="fnameErr" class="error"></span>
+
+  <label>Email</label><br>
+  <input type="text" id="email"><br>
+  <span id="emailErr" class="error"></span><br>
+
+  <button type="submit">Add Student</button>
+</form>
+
+<p id="successMsg"></p>
+</div>
+
+<script>
+// ===== Update Table =====
+function updateTable(){
+  $("#attendanceTable tbody tr").each(function(){
+    const tr=$(this);
+    tr.removeClass("green yellow red");
+
+    const tds=tr.find("td");
+    let abs=0, par=0;
+
+    tds.slice(2,8).each(function(){ if($(this).text().trim()==="") abs++; });
+    tds.slice(8,14).each(function(){ if($(this).text().trim()==="✓") par++; });
+
+    tds.eq(14).text(abs);
+    tds.eq(15).text(par);
+
+    let msg="";
+    if(abs<3){ tr.addClass("green"); msg="Great attendance!"; }
+    else if(abs<=4){ tr.addClass("yellow"); msg="Warning: Low attendance"; }
+    else{ tr.addClass("red"); msg="Excluded: Too many absences"; }
+
+    tds.eq(16).text(msg);
+  });
+}
+updateTable();
+
+// ===== Validation =====
+function validateForm(){
+  let ok=true;
+  $("#sidErr,#lnameErr,#fnameErr,#emailErr").text("");
+
+  if(!/^[0-9]+$/.test($("#sid").val())){ $("#sidErr").text("Numbers only"); ok=false; }
+  if(!/^[A-Za-z]+$/.test($("#lname").val())){ $("#lnameErr").text("Letters only"); ok=false; }
+  if(!/^[A-Za-z]+$/.test($("#fname").val())){ $("#fnameErr").text("Letters only"); ok=false; }
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test($("#email").val())){ $("#emailErr").text("Invalid email"); ok=false; }
+
+  return ok;
+}
+
+// ===== Add Student =====
+$("#addForm").on("submit", function(e){
+  e.preventDefault();
+  if(!validateForm()) return;
+
+  let ln=$("#lname").val(), fn=$("#fname").val();
+
+  $("#attendanceTable tbody").append(`
+    <tr>
+      <td>${ln}</td><td>${fn}</td>
+      <td></td><td></td><td></td><td></td><td></td><td></td>
+      <td></td><td></td><td></td><td></td><td></td><td></td>
+      <td></td><td></td><td></td>
+    </tr>
+  `);
+
+  updateTable();
+  $("#successMsg").text("Student added!");
+});
+
+// ===== Search =====
+$("#searchBox").on("input", function(){
+  let v=$(this).val().toLowerCase();
+  $("#attendanceTable tbody tr").filter(function(){
+    $(this).toggle($(this).text().toLowerCase().indexOf(v)>-1);
+  });
+});
+</script>
+
+</body>
+</html>
